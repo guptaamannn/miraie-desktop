@@ -1,0 +1,91 @@
+.logo.vite:hover {
+  filter: drop-shadow(0 0 2em #747bff);
+}
+
+.logo.typescript:hover {
+  filter: drop-shadow(0 0 2em #2d79c7);
+}
+:root {
+  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
+  font-size: 16px;
+  line-height: 24px;
+  font-weight: 400;
+
+  color: #0f0f0f;
+  background-color: transparent;
+  --bg-color: #f6f6f6;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  overflow: hidden; /* Hide scrollbars for popup */
+  background-color: transparent; /* Allows transparent window */
+}
+
+.container {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background-color: transparent;
+  box-sizing: border-box;
+}
+
+.power-button {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(145deg, #f0f0f0, #cacaca);
+  box-shadow:  10px 10px 20px #bebebe,
+              -10px -10px 20px #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #ff4757;
+  cursor: pointer;
+  transition: all 0.2s ease-in-out;
+  outline: none;
+}
+
+.power-button:hover {
+  background: linear-gradient(145deg, #ffffff, #e6e6e6);
+  color: #ff6b81;
+}
+
+.power-button:active {
+  background: #e0e0e0;
+  box-shadow: inset 10px 10px 20px #bebebe,
+              inset -10px -10px 20px #ffffff;
+}
+
+.power-button.active {
+  color: #2ed573;
+}
+
+@media (prefers-color-scheme: dark) {
+  .power-button {
+    background: linear-gradient(145deg, #2a2a2a, #232323);
+    box-shadow:  10px 10px 20px #1a1a1a,
+                -10px -10px 20px #343434;
+  }
+  
+  .power-button:hover {
+    background: linear-gradient(145deg, #323232, #2a2a2a);
+  }
+  
+  .power-button:active {
+    background: #272727;
+    box-shadow: inset 10px 10px 20px #1a1a1a,
+                inset -10px -10px 20px #343434;
+  }
+}
