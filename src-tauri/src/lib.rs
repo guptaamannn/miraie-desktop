@@ -5,15 +5,41 @@ use tauri::{
 };
 use tauri_plugin_positioner::{Position, WindowExt};
 
+use tauri_plugin_shell::ShellExt;
+
 // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
 #[tauri::command]
 fn greet(name: &str) -> String {
     format!("Hello, {}! You've been greeted from Rust!", name)
 }
 
+#[tauri::command]
+async fn control_ac(app: tauri::AppHandle, mobile: &str, password: &str, command: &str, value: Option<&str>) -> Result<String, String> {
+    let mut args = vec!["--mobile", mobile, "--password", password, "--command", command];
+    
+    if let Some(v) = value {
+        args.push("--value");
+        args.push(v);
+    }
+
+    let sidecar_command = app.shell().sidecar("python-api")
+        .map_err(|e| e.to_string())?
+        .args(&args);
+    
+    let output = sidecar_command.output().await.map_err(|e| e.to_string())?;
+    
+    if output.status.success() {
+        Ok(String::from_utf8_lossy(&output.stdout).to_string())
+    } else {
+        let err_msg = String::from_utf8_lossy(&output.stderr);
+        Err(format!("Error: {}", err_msg))
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
+        .plugin(tauri_plugin_shell::init())
         .plugin(tauri_plugin_positioner::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|app| {
@@ -56,7 +82,7 @@ pub fn run() {
 
             Ok(())
         })
-        .invoke_handler(tauri::generate_handler![greet])
+        .invoke_handler(tauri::generate_handler![greet, control_ac])
         .on_window_event(|window, event| match event {
             tauri::WindowEvent::Focused(false) => {
                 let _ = window.hide();
