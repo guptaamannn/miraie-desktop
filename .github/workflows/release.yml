@@ -24,7 +24,7 @@ jobs:
             pyinstaller-cmd: .venv/bin/pyinstaller
             sidecar-src: python-api/dist/main
 
-          - platform: macos-13          # Intel Mac
+          - platform: macos-15-intel    # Intel Mac
             python-sidecar-name: python-api-x86_64-apple-darwin
             pyinstaller-cmd: .venv/bin/pyinstaller
             sidecar-src: python-api/dist/main
