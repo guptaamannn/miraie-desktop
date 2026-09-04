@@ -1,0 +1,121 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'           # triggers on v0.1.0, v1.2.3, etc.
+
+jobs:
+  release:
+    permissions:
+      contents: write  # needed to create GitHub releases
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - platform: windows-latest
+            python-sidecar-name: python-api-x86_64-pc-windows-msvc.exe
+            pyinstaller-cmd: .venv\Scripts\pyinstaller.exe
+            sidecar-src: python-api\dist\main.exe
+
+          - platform: macos-latest      # Apple Silicon (M-series)
+            python-sidecar-name: python-api-aarch64-apple-darwin
+            pyinstaller-cmd: .venv/bin/pyinstaller
+            sidecar-src: python-api/dist/main
+
+          - platform: macos-13          # Intel Mac
+            python-sidecar-name: python-api-x86_64-apple-darwin
+            pyinstaller-cmd: .venv/bin/pyinstaller
+            sidecar-src: python-api/dist/main
+
+    runs-on: ${{ matrix.platform }}
+
+    steps:
+      # ── Checkout ──────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # ── Rust ──────────────────────────────────────────────────────────────
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache Rust build artifacts
+        uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: src-tauri
+
+      # ── Node / pnpm ───────────────────────────────────────────────────────
+      - name: Setup pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install frontend dependencies
+        run: pnpm install
+
+      # ── Python / uv ───────────────────────────────────────────────────────
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.14'
+          allow-prereleases: true
+
+      - name: Install Python dependencies
+        working-directory: python-api
+        run: uv sync
+
+      # ── Build Python sidecar ──────────────────────────────────────────────
+      - name: Build Python sidecar (PyInstaller)
+        working-directory: python-api
+        run: ${{ matrix.pyinstaller-cmd }} main.spec --distpath dist --workpath build --noconfirm
+
+      # Copy the binary to src-tauri/bin with the correct Tauri target-triple name
+      - name: Copy sidecar to Tauri bin (Windows)
+        if: matrix.platform == 'windows-latest'
+        run: |
+          New-Item -ItemType Directory -Force -Path src-tauri\bin
+          Copy-Item "${{ matrix.sidecar-src }}" "src-tauri\bin\${{ matrix.python-sidecar-name }}" -Force
+
+      - name: Copy sidecar to Tauri bin (macOS)
+        if: startsWith(matrix.platform, 'macos')
+        run: |
+          mkdir -p src-tauri/bin
+          cp ${{ matrix.sidecar-src }} src-tauri/bin/${{ matrix.python-sidecar-name }}
+          chmod +x src-tauri/bin/${{ matrix.python-sidecar-name }}
+
+      # ── macOS code-signing setup (optional, skipped if secrets not set) ──
+      # To enable signing, add these secrets to your repo:
+      #   APPLE_CERTIFICATE, APPLE_CERTIFICATE_PASSWORD,
+      #   APPLE_SIGNING_IDENTITY, APPLE_ID, APPLE_PASSWORD, APPLE_TEAM_ID
+      # See: https://v2.tauri.app/distribute/sign/macos/
+
+      # ── Tauri build & release ─────────────────────────────────────────────
+      - name: Build and release with Tauri
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # Uncomment when Apple signing secrets are configured:
+          # APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
+          # APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          # APPLE_SIGNING_IDENTITY: ${{ secrets.APPLE_SIGNING_IDENTITY }}
+          # APPLE_ID: ${{ secrets.APPLE_ID }}
+          # APPLE_PASSWORD: ${{ secrets.APPLE_PASSWORD }}
+          # APPLE_TEAM_ID: ${{ secrets.APPLE_TEAM_ID }}
+        with:
+          tagName: ${{ github.ref_name }}        # e.g. v0.1.0
+          releaseName: 'miraie-desktop ${{ github.ref_name }}'
+          releaseBody: |
+            Control your Panasonic MirAIe AC from the system tray.
+            See the [README](https://github.com/${{ github.repository }}/blob/main/README.md) for setup instructions.
+          releaseDraft: true     # set to false to publish immediately
+          prerelease: false
