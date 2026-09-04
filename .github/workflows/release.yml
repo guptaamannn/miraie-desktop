@@ -82,7 +82,9 @@ jobs:
       # Copy the binary to src-tauri/bin with the correct Tauri target-triple name
       - name: Copy sidecar to Tauri bin (Windows)
         if: matrix.platform == 'windows-latest'
-        run: Copy-Item "${{ matrix.sidecar-src }}" "src-tauri\bin\${{ matrix.python-sidecar-name }}" -Force
+        run: |
+          New-Item -ItemType Directory -Force -Path src-tauri\bin
+          Copy-Item "${{ matrix.sidecar-src }}" "src-tauri\bin\${{ matrix.python-sidecar-name }}" -Force
 
       - name: Copy sidecar to Tauri bin (macOS)
         if: startsWith(matrix.platform, 'macos')
